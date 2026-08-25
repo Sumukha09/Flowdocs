@@ -1,4 +1,4 @@
-import { Activity, Database, Server, ServerCrash } from 'lucide-react';
+import { Activity, Database, Server } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Health() {
@@ -16,15 +16,6 @@ export default function Health() {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  const triggerCrash = async () => {
-    try {
-      await fetch('http://127.0.0.1:8000/api/v1/runs/crash', { method: 'POST' });
-    } catch {
-      // Ignored, crash drops connection
-    }
-    setHealthy(false);
-  };
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8">
@@ -49,22 +40,6 @@ export default function Health() {
             <h2 className="text-lg font-semibold text-ink">PostgreSQL</h2>
             <p className="text-sm mt-1 font-medium text-green">Connected</p>
          </div>
-      </div>
-
-      <div className="p-6 rounded-card bg-surface border border-line shadow-card mt-8">
-         <h2 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4 flex items-center gap-2">
-            <ServerCrash size={16} className="text-red" /> Chaos Engineering
-         </h2>
-         <p className="text-sm text-ink-2 mb-6 max-w-xl">
-            Simulate a catastrophic backend failure. This will test the checkpointer's ability to recover graph state when the process dies midway through a workflow execution.
-         </p>
-         
-         <button 
-           onClick={triggerCrash}
-           className="px-4 py-2 bg-red/10 text-red border border-red/20 rounded-control font-medium text-sm hover:bg-red hover:text-white transition-colors"
-         >
-            Simulate Server Crash
-         </button>
       </div>
     </div>
   );

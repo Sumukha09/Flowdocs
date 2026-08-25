@@ -16,10 +16,6 @@ export default function StatusBar() {
           <Database size={12} className="text-green" />
           <span>DB: Connected</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Cpu size={12} className="text-ink-3" />
-          <span>MCP: Offline</span>
-        </div>
       </div>
       
       <div>

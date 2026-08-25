@@ -117,8 +117,8 @@ export default function Overview() {
         <StatCard title="Pending Approvals" value={s.pending_approvals} label="Awaiting Human Review" icon={AlertTriangle} colorClass="text-orange" />
         <StatCard title="Total Findings" value={s.total_findings} label="Detected issues" icon={AlertTriangle} colorClass="text-red" />
         <StatCard title="Total Runs" value={s.total_runs} label="All Time" icon={List} colorClass="text-ink-2" />
-        <StatCard title="Cost Observer" value={`$${(s.total_cost_micro / 1000000).toFixed(4)}`} label="LLM API Cost" icon={Activity} colorClass="text-green" />
         
+
         <div className="rounded-card bg-surface shadow-card p-4 flex flex-col justify-between border-l-4 border-accent">
            <div className="flex items-start justify-between">
               <span className="text-sm font-medium text-ink-2">Rate Limits</span>

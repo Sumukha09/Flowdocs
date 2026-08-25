@@ -33,7 +33,6 @@ export default function Sidebar() {
 
   const systemLinks = [
     { to: '/health', icon: Activity, label: 'System Health' },
-    { to: '#', icon: Cpu, label: 'MCP (Offline)' },
     { to: '#', icon: Settings, label: 'Settings' },
   ];
 
