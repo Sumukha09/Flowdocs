@@ -67,7 +67,7 @@ class Settings(BaseSettings):
         description="Initial backoff seconds before retrying on 429."
     )
     llm_token_budget: int = Field(
-        default=50000,
+        default=500000,
         description="Maximum allowed tokens per workflow run."
     )
 

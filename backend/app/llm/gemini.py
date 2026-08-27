@@ -108,7 +108,18 @@ class GeminiLLMAdapter(LLMAdapter):
                 raise LLMProviderUnavailableError(f"Gemini API Error: {e}") from e
             except Exception as e:
                 attempt_latency = int((time.time() - attempt_start) * 1000)
-                logger.warning(f"LLM_ATTEMPT: request_id={req_id} attempt={attempt} status=failed error_type=UnknownError latency={attempt_latency}ms reason='{str(e)}'")
+                error_msg = str(e).lower()
+                logger.warning(f"LLM_ATTEMPT: request_id={req_id} attempt={attempt} status=failed error_type=UnknownError latency={attempt_latency}ms reason='{error_msg}'")
+                
+                # Retry on network disconnects or timeouts
+                if attempt < self.max_retries and ("disconnect" in error_msg or "timeout" in error_msg or "connection" in error_msg or "protocol" in error_msg):
+                    base = self.initial_backoff * (2 ** (attempt - 1))
+                    jitter = random.uniform(0, 0.3 * base)
+                    sleep_time = base + jitter
+                    logger.warning(f"Gemini Network Error hit. Retrying in {sleep_time:.2f}s... (Attempt {attempt+1}/{self.max_retries})")
+                    time.sleep(sleep_time)
+                    continue
+                    
                 raise LLMProviderUnavailableError(f"Unexpected error communicating with Gemini: {e}") from e
         else:
             raise LLMProviderUnavailableError("Exceeded max retries for Gemini API due to rate limits.")
