@@ -93,12 +93,7 @@ To run the MCP server directly via standard I/O (stdio transport), you need a lo
    # Windows: .venv\Scripts\activate
    # Mac/Linux: source .venv/bin/activate
    ```
-2. Install dependencies:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-3. Run the MCP Server:
+2. Run the MCP Server:
    ```bash
    python run_mcp.py
    ```
