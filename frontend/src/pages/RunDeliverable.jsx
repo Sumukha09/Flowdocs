@@ -30,7 +30,7 @@ export default function RunDeliverable() {
   const approvedFindings = details.findings.filter(f => f.status === 'approved');
 
   return (
-    <div className="p-8 max-w-6xl mx-auto flex gap-8 pb-20">
+    <div className="deliverable-layout p-8 max-w-6xl mx-auto flex gap-8 pb-20">
       <div className="flex-1 space-y-8">
          <div className="flex items-center text-xs text-ink-3 font-mono mb-2">
             <Link to="/runs" className="hover:text-ink hover:underline">Runs</Link>

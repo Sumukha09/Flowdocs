@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getRunState, getRunDetails, addDocumentsToRun, resumeRun } from '../api';
 import TaskRows from '../components/ui/TaskRows';
 import LoadingState from '../components/ui/LoadingState';
-import { AlertCircle, CheckCircle2, Clock, ChevronRight, Upload, FilePlus } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, ChevronRight, Upload, FilePlus, Download } from 'lucide-react';
 
 const STAGES = [
   'ingest',
@@ -312,8 +312,9 @@ export default function RunDetail() {
               {state.status === 'completed' && (
                 <div className="pt-4 border-t border-line">
                   <a href={`http://127.0.0.1:8000/api/v1/runs/${id}/report`} target="_blank" rel="noreferrer" 
-                     className="w-full text-center block px-3 py-2 bg-ink text-canvas rounded-control font-medium text-sm hover:bg-ink-2 transition-colors">
-                    Download Deliverable
+                     className="w-full text-center flex items-center justify-center gap-2 px-3 py-2.5 bg-accent text-white rounded-control font-semibold text-sm hover:bg-accent-ink transition-colors">
+                    <Download size={15} aria-hidden="true" />
+                    <span>Download Deliverable</span>
                   </a>
                 </div>
               )}

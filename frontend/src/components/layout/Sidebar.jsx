@@ -1,16 +1,14 @@
 import { NavLink, useParams } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  List, 
-  FileText, 
-  AlertTriangle, 
-  Crosshair, 
-  CheckSquare, 
-  CheckCircle, 
-  History, 
-  Activity, 
-  Settings,
-  Cpu
+import {
+  LayoutDashboard,
+  List,
+  FileText,
+  AlertTriangle,
+  CheckSquare,
+  CheckCircle,
+  History,
+  Activity,
+  Workflow,
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -33,27 +31,29 @@ export default function Sidebar() {
 
   const systemLinks = [
     { to: '/health', icon: Activity, label: 'System Health' },
-    { to: '#', icon: Settings, label: 'Settings' },
   ];
 
   return (
-    <div className="w-64 h-full border-r border-line bg-surface flex flex-col">
-      <div className="p-4 border-b border-line flex items-center gap-2">
-        <div className="size-6 rounded bg-accent text-white flex items-center justify-center font-bold text-xs">F</div>
-        <span className="font-semibold tracking-tight text-ink">FlowDocs</span>
+    <aside className="app-sidebar flex flex-col">
+      <div className="px-5 py-[18px] border-b border-line flex items-center gap-3">
+        <div className="size-9 rounded-xl bg-accent text-white flex items-center justify-center shadow-btn"><Workflow size={18} /></div>
+        <div>
+          <span className="block font-bold tracking-tight text-ink leading-tight">FlowDocs</span>
+          <span className="block text-[10px] text-ink-3 mt-0.5 tracking-[.12em] uppercase">Review workspace</span>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
-        <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-ink-3 uppercase tracking-wider">Global</div>
-          <div className="space-y-0.5">
+      <nav className="sidebar-links flex-1 overflow-y-auto py-5 px-3 space-y-7">
+        <section>
+          <div className="sidebar-group-label px-3 mb-2 text-[10px] font-bold text-ink-3 uppercase tracking-[.16em]">Workspace</div>
+          <div className="sidebar-link-list space-y-1">
             {globalLinks.map(link => (
               <NavLink 
                 key={link.to} 
                 to={link.to}
-                className={({ isActive }) => 
-                  `flex items-center gap-3 px-3 py-2 text-sm rounded-control transition-colors ${
-                    isActive ? 'bg-field text-ink font-medium' : 'text-ink-2 hover:bg-hover hover:text-ink'
+                className={({ isActive }) =>
+                  `sidebar-link flex items-center gap-3 px-3 py-2.5 text-[13px] rounded-control transition-colors ${
+                    isActive ? 'bg-accent-tint text-accent-ink font-semibold' : 'text-ink-2 hover:bg-hover hover:text-ink'
                   }`
                 }
               >
@@ -62,22 +62,22 @@ export default function Sidebar() {
               </NavLink>
             ))}
           </div>
-        </div>
+        </section>
 
         {runLinks.length > 0 && (
-          <div>
-            <div className="px-3 mb-2 text-xs font-semibold text-ink-3 uppercase tracking-wider truncate" title={`Run Context: ${runId}`}>
+          <section>
+            <div className="sidebar-group-label px-3 mb-2 text-[10px] font-bold text-ink-3 uppercase tracking-[.16em] truncate" title={`Run Context: ${runId}`}>
               Active Run
             </div>
-            <div className="space-y-0.5">
+            <div className="sidebar-link-list space-y-1">
               {runLinks.map(link => (
                 <NavLink 
                   key={link.to} 
                   to={link.to}
                   end
-                  className={({ isActive }) => 
-                    `flex items-center gap-3 px-3 py-2 text-sm rounded-control transition-colors ${
-                      isActive ? 'bg-field text-ink font-medium' : 'text-ink-2 hover:bg-hover hover:text-ink'
+                  className={({ isActive }) =>
+                    `sidebar-link flex items-center gap-3 px-3 py-2.5 text-[13px] rounded-control transition-colors ${
+                      isActive ? 'bg-accent-tint text-accent-ink font-semibold' : 'text-ink-2 hover:bg-hover hover:text-ink'
                     }`
                   }
                 >
@@ -86,19 +86,19 @@ export default function Sidebar() {
                 </NavLink>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-ink-3 uppercase tracking-wider">System</div>
-          <div className="space-y-0.5">
+        <section>
+          <div className="sidebar-group-label px-3 mb-2 text-[10px] font-bold text-ink-3 uppercase tracking-[.16em]">System</div>
+          <div className="sidebar-link-list space-y-1">
             {systemLinks.map(link => (
               <NavLink 
                 key={link.label} 
                 to={link.to}
-                className={({ isActive }) => 
-                  `flex items-center gap-3 px-3 py-2 text-sm rounded-control transition-colors ${
-                    isActive ? 'bg-field text-ink font-medium' : 'text-ink-2 hover:bg-hover hover:text-ink'
+                className={({ isActive }) =>
+                  `sidebar-link flex items-center gap-3 px-3 py-2.5 text-[13px] rounded-control transition-colors ${
+                    isActive ? 'bg-accent-tint text-accent-ink font-semibold' : 'text-ink-2 hover:bg-hover hover:text-ink'
                   }`
                 }
               >
@@ -107,8 +107,8 @@ export default function Sidebar() {
               </NavLink>
             ))}
           </div>
-        </div>
-      </div>
-    </div>
+        </section>
+      </nav>
+    </aside>
   );
 }

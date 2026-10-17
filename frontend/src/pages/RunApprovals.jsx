@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getRunDetails, approveFinding } from '../api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getRunDetails, approveFinding, commitCleanRun } from '../api';
 import ApprovalCard from '../components/ui/ApprovalCard';
 import LoadingState from '../components/ui/LoadingState';
 import { ChevronRight, CheckSquare } from 'lucide-react';
 
 export default function RunApprovals() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -72,13 +73,11 @@ export default function RunApprovals() {
             onClick={async () => {
               try {
                 setSubmitting(true);
-                await import('../api').then(m => m.commitCleanRun(id));
-                const newData = await getRunDetails(id);
-                setDetails(newData);
-                alert('Run committed successfully.');
+                await commitCleanRun(id);
+                navigate(`/runs/${id}`, { replace: true });
               } catch(e) {
                 console.error(e);
-                alert('Failed to commit run.');
+                alert(`Failed to commit run: ${e.message || e}`);
               } finally {
                 setSubmitting(false);
               }
