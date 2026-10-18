@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from langgraph.checkpoint.postgres import PostgresSaver
 
@@ -17,92 +17,22 @@ from app.models.claim import Claim
 from app.models.cost_report import CostReport
 from app.models.audit_log import AuditLog
 from app.models.claim_evidence import ClaimEvidence as Evidence
-from app.services.run import get_run
-from app.services.audit import create_audit_log
+from app.services.run import get_run, sync_run_status
+from app.services.run_workflow import (
+    FindingAlreadyReviewed,
+    FindingNotFound,
+    create_run as create_run_record,
+    get_checkpoint_state,
+    get_run_details as build_run_details,
+    mark_run_running,
+    queue_document_paths,
+    review_finding as apply_finding_review,
+    update_approval_checkpoint,
+)
+from app.services.workflow_runner import run_graph_background
 from app.workflow.graph import compile_workflow
 
 router = APIRouter(prefix="/runs", tags=["runs"])
-
-@router.get("/run_pytest")
-def run_pytest_route():
-    import subprocess
-    try:
-        # Run pytest and capture output
-        result = subprocess.run(
-            ["python", "-m", "pytest", "tests/"],
-            capture_output=True,
-            text=True,
-            cwd="/app"
-        )
-        return {
-            "success": result.returncode == 0,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode
-        }
-    except Exception as e:
-        import traceback
-        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
-
-
-
-from fastapi import BackgroundTasks
-import logging
-
-def run_graph_background(run_id_str: str, initial_state: dict):
-    from app.config import get_settings
-    settings = get_settings()
-    conn_string = settings.database_url.replace("postgresql+psycopg://", "postgresql://")
-    try:
-        with PostgresSaver.from_conn_string(conn_string) as saver:
-            saver.setup()
-            graph = compile_workflow(checkpointer=saver, interrupt_before=["approval"])
-            thread_config = {"configurable": {"thread_id": run_id_str}}
-            final_state = graph.invoke(initial_state, thread_config)
-            
-            # Extract final stage to update DB status
-            current_stage = final_state.get("current_stage")
-
-            from app.db.session import get_session_factory
-            from app.models.run import Run
-            import uuid
-            
-            session_factory = get_session_factory()
-            with session_factory() as session:
-                run = session.get(Run, uuid.UUID(run_id_str))
-                if run:
-                    if final_state.get("status") == "failed":
-                        run.status = "failed"
-                    elif current_stage == "completed":
-                        run.status = "completed"
-                    elif current_stage == "failed":
-                        run.status = "failed"
-                    elif current_stage == "approval":
-                        # If genuinely waiting for approval, keep it waiting.
-                        pass # leaving it running/pending_approval depending on what it currently is
-                    
-                    session.commit()
-    except Exception as e:
-        import traceback
-        print(f"[ERROR] Graph execution failed for run {run_id_str}: {e}")
-        traceback.print_exc()
-        try:
-            from app.db.session import get_session_factory
-            from app.models.run import Run
-            import uuid
-            session_factory = get_session_factory()
-            with session_factory() as session:
-                run = session.get(Run, uuid.UUID(run_id_str))
-                if run:
-                    run.status = "failed"
-                    if run.input_metadata is None:
-                        run.input_metadata = {}
-                    meta = dict(run.input_metadata)
-                    meta["error"] = str(e)
-                    run.input_metadata = meta
-                    session.commit()
-        except:
-            pass
 
 @router.post(
     "",
@@ -124,7 +54,6 @@ def create_run(
         path = f.file_path
         if f.file_content_base64:
             import base64
-            import tempfile
             import os
             
             content = base64.b64decode(f.file_content_base64)
@@ -141,22 +70,9 @@ def create_run(
     if not file_paths:
         raise HTTPException(status_code=400, detail="Must provide at least one valid file_path or file_content_base64")
 
-    # 1. Create the database record
-    run = Run(status="running", input_metadata={
-        "file_paths": file_paths,
-        "compliance_rules": request.compliance_rules
-    })
-    db.add(run)
-    db.commit()
-    
-    run_id_str = str(run.id)
+    initial_state = create_run_record(db, file_paths, request.compliance_rules)
+    run_id_str = initial_state["run_id"]
     print(f"[DEBUG] DB commit successful. run_id: {run_id_str}")
-    
-    # 2. Setup initial state
-    initial_state = {
-        "run_id": run_id_str,
-        "current_stage": "ingest",
-    }
     
     # 3. Schedule graph in background
     print(f"[DEBUG] Scheduling run_graph_background task for run {run_id_str}...")
@@ -240,18 +156,11 @@ def add_documents_to_run(
         }
         
     # Append to run.input_metadata
-    meta = dict(run.input_metadata or {})
-    current_paths = meta.get("file_paths", [])
-    meta["file_paths"] = current_paths + new_paths
-    run.input_metadata = meta
-    
-    # Update run status
-    run.status = "running"
-    db.commit()
+    queue_document_paths(db, run, new_paths, deduplicate_paths=False)
     
     # Resume graph processing from ingest
-    graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
     thread_config = {"configurable": {"thread_id": str(run_id)}}
+    graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
     
     # Update LangGraph state to trick it into restarting from start node
     # This prevents the graph from instantly terminating if it was previously at END.
@@ -301,26 +210,12 @@ def commit_clean_run(
     if pending_count > 0:
         raise HTTPException(status_code=400, detail="Cannot commit cleanly while findings are pending.")
 
-    graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
     thread_config = {"configurable": {"thread_id": str(run_id)}}
-    
-    # Update the state to indicate approval is complete
-    graph.update_state(
-        thread_config,
-        {"approval_decision": "approved", "reviewer": "human_manual"},
-        as_node="verify"
-    )
+    graph = update_approval_checkpoint(checkpointer, str(run_id), "human_manual")
     
     try:
         final_state = graph.invoke(None, thread_config)
-        current_stage = final_state.get("current_stage")
-        run = db.query(Run).filter(Run.id == run_id).first()
-        if run:
-            if current_stage == "completed":
-                run.status = "completed"
-            elif current_stage == "failed":
-                run.status = "failed"
-            db.commit()
+        sync_run_status(db, run_id, final_state)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -356,21 +251,9 @@ def resume_run(
         
     run_id_str = str(run.id)
     
-    graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
-    thread_config = {"configurable": {"thread_id": run_id_str}}
-    state_snapshot = graph.get_state(thread_config)
-    
-    initial_state = {}
-    if state_snapshot and state_snapshot.values:
-        initial_state = state_snapshot.values
-    else:
-        initial_state = {
-            "run_id": run_id_str,
-            "current_stage": "ingest",
-        }
+    initial_state = get_checkpoint_state(checkpointer, run_id_str)
         
-    run.status = "running"
-    db.commit()
+    mark_run_running(db, run)
     
     print(f"[DEBUG] Resuming run_graph_background task for run {run_id_str}...")
     background_tasks.add_task(run_graph_background, run_id_str, initial_state)
@@ -409,16 +292,7 @@ def get_run_state(
 ) -> RunStateResponse:
     """Retrieve the durable LangGraph state for a run."""
     
-    graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
-    thread_config = {"configurable": {"thread_id": str(run_id)}}
-    
-    state_snapshot = graph.get_state(thread_config)
-    
-    state = {}
-    if state_snapshot and state_snapshot.values:
-        state = dict(state_snapshot.values)
-    else:
-        state = {"run_id": str(run_id), "current_stage": "ingest"}
+    state = get_checkpoint_state(checkpointer, str(run_id))
         
     # Inject DB status and errors if the run failed outside the graph
     from app.db.session import get_session_factory
@@ -450,58 +324,7 @@ def get_run_details(
     checkpointer: PostgresSaver = Depends(get_checkpointer),
 ) -> RunDetailsResponse:
     """Retrieve detailed UI-ready data for a run."""
-    graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
-    thread_config = {"configurable": {"thread_id": str(run_id)}}
-    state_snapshot = graph.get_state(thread_config)
-    
-    doc_ids = []
-    if state_snapshot and state_snapshot.values:
-        doc_ids = state_snapshot.values.get("document_ids", [])
-        
-    if doc_ids:
-        docs = db.query(Document).filter(Document.id.in_([uuid.UUID(d) for d in doc_ids])).all()
-    else:
-        docs = []
-        
-    findings = db.query(Finding).filter(Finding.run_id == run_id).all()
-    
-    doc_details = [
-        {"id": d.id, "name": d.name, "byte_size": d.byte_size}
-        for d in docs
-    ]
-    
-    finding_details = []
-    for f in findings:
-        claim_details = []
-        for c in f.claims:
-            evidence_details = []
-            for e in c.evidence:
-                evidence_details.append({
-                    "id": e.id,
-                    "snippet": e.snippet,
-                    "relevance": e.relevance,
-                    "document_name": e.chunk.document.name if e.chunk and e.chunk.document else None
-                })
-            claim_details.append({
-                "id": c.id,
-                "statement": c.statement,
-                "confidence": c.confidence,
-                "evidence": evidence_details
-            })
-        finding_details.append({
-            "id": f.id,
-            "title": f.title,
-            "summary": f.summary,
-            "severity": f.severity,
-            "status": f.status,
-            "claims": claim_details
-        })
-        
-    return RunDetailsResponse(
-        run_id=run_id,
-        documents=doc_details,
-        findings=finding_details
-    )
+    return RunDetailsResponse(**build_run_details(db, checkpointer, run_id))
 
 @router.post(
     "/{run_id}/findings/{finding_id}/approve",
@@ -519,92 +342,38 @@ def approve_finding(
     
     If all findings for the run are reviewed, the workflow automatically resumes.
     """
-    # 1. Fetch the finding securely scoped to the run
-    finding = db.query(Finding).filter(
-        Finding.id == finding_id, 
-        Finding.run_id == run_id
-    ).with_for_update().first()  # row-level lock for concurrency protection
-    
-    if not finding:
+    try:
+        result = apply_finding_review(
+            db,
+            run_id,
+            finding_id,
+            request.decision,
+            comment=request.comment,
+            edited_text=request.edited_text,
+            audit=True,
+        )
+    except FindingNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Finding not found for this run."
-        )
-        
-    # 2. Concurrency/Stale Check: Ensure finding is still pending
-    if finding.status != "pending":
+            detail=str(exc),
+        ) from exc
+    except FindingAlreadyReviewed as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Finding has already been reviewed (current status: {finding.status})."
-        )
-        
-    # 3. Apply decision
-    if request.decision == "approve":
-        finding.status = "approved"
-    elif request.decision == "reject":
-        finding.status = "rejected"
-    elif request.decision == "edit":
-        finding.status = "approved"
-    
-    # 4. Handle edits properly without destroying auditability
-    if request.decision == "edit" and request.edited_text:
-        # We don't overwrite payload if it's somehow none, but it shouldn't be
-        if finding.payload is None:
-            finding.payload = {}
-        
-        # Preserve original summary
-        payload_copy = dict(finding.payload)
-        payload_copy["original_summary"] = finding.summary
-        finding.payload = payload_copy
-        
-        # Apply the edit
-        finding.summary = request.edited_text
-        
-    # 5. Record the action cleanly in the audit log
-    create_audit_log(
-        session=db,
-        run_id=run_id,
-        action=f"finding_{request.decision}",
-        details={
-            "finding_id": str(finding_id),
-            "comment": request.comment,
-            "edited_text": request.edited_text if request.decision == "edit" else None,
-            "reviewer": "human"  # Placeholder until real auth exists
-        }
-    )
-    
-    db.commit()
-    
-    # 6. Check if we need to resume the workflow
-    pending_count = db.query(Finding).filter(
-        Finding.run_id == run_id, 
-        Finding.status == "pending"
-    ).count()
+            detail=str(exc),
+        ) from exc
+
+    pending_count = result.pending_count
     
     if pending_count == 0:
         # All findings are reviewed! Update the graph state and resume.
-        graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
         thread_config = {"configurable": {"thread_id": str(run_id)}}
-        
-        # Update the state to indicate approval is complete
-        graph.update_state(
-            thread_config,
-            {"approval_decision": "approved", "reviewer": "human"},
-            as_node="verify" # Provide the update as if it came from verify, to proceed safely
-        )
+        graph = update_approval_checkpoint(checkpointer, str(run_id), "human")
         
         # Resume the workflow by invoking it with no new input
         try:
             final_state = graph.invoke(None, thread_config)
-            
-            current_stage = final_state.get("current_stage")
-            run = db.query(Run).filter(Run.id == run_id).first()
-            if run:
-                if current_stage == "completed":
-                    run.status = "completed"
-                elif current_stage == "failed":
-                    run.status = "failed"
-                db.commit()
+            sync_run_status(db, run_id, final_state)
                 
         except Exception as e:
             # Again, log the error safely without exposing raw traces
@@ -788,12 +557,3 @@ def get_document_content(
         raise HTTPException(status_code=404, detail="Source file missing on disk")
         
     return FileResponse(source_path)
-@router.post(
-    "/crash",
-    summary="DEV ONLY: Hard crash the server to test recovery",
-)
-def crash_server():
-    """Hard crash the uvicorn process without cleanup."""
-    import os
-    print("[DEV] Crashing server on purpose!")
-    os._exit(1)

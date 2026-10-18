@@ -18,34 +18,34 @@ Design notes:
   SQLAlchemy ORM objects are stored.
 * ``verification_result_counts`` is a ``dict[str, int]`` keyed by result
   category (e.g. ``{"verified": 12, "rejected": 1, "insufficient": 2}``).
-* Stage and status identifiers are exposed as ``Literal`` types so callers
-
-  get exhaustiveness checking without having to restate the state fields.
-  The literals are *separate* from the state contract — they are vocabulary
-  helpers, not duplicated fields.
+* Stage, status, and decision identifiers use ``Literal`` aliases directly in
+  the state contract for type checking.
 """
 
 
 from typing import Literal, TypedDict
 
 # ---------------------------------------------------------------------------
-# Vocabulary literals. These are *vocabulary* identifiers, not state fields.
-# They exist so that code that writes a stage or status can be type-checked
-# exhaustively without the state contract having to be restated.
+# Vocabulary literals. These aliases are also used by the state fields below.
+# They are kept here as the canonical source for workflow stage and status
+# values. Legacy stage values remain included for existing checkpoints.
 # ---------------------------------------------------------------------------
 
-#: Ordered set of pipeline stages. Each step reads the previous step's
-#: outputs from the state and writes its own outputs back.
+#: Values emitted by the graph, terminal markers, and legacy checkpoint values.
 Stage = Literal[
     "ingest",
     "extract",
     "analyze",
     "verify",
+    "approval",
+    "complete",
+    "failed",
+    "completed",
     "approve",
     "finalize",
 ]
 
-#: Coarse run status values reported through ``WorkflowState.status``.
+#: Coarse workflow and persisted run status values returned to callers.
 Status = Literal[
     "pending",
     "running",
@@ -56,7 +56,7 @@ Status = Literal[
     "completed",
 ]
 
-#: Approval decisions that populate ``approval_decision``.
+#: Approval decisions stored in workflow state.
 ApprovalDecision = Literal["approved", "rejected"]
 
 
@@ -75,15 +75,15 @@ class WorkflowState(TypedDict, total=False):
 
     # --- Run identity and lifecycle ------------------------------------------
     run_id: str
-    current_stage: str
-    status: str
+    current_stage: Stage
+    status: Status
     document_ids: list[str]
-    completed_stages: list[str]
+    completed_stages: list[Stage]
     errors: list[str]
 
     # --- Approval gate --------------------------------------------------------
     approval_required: bool
-    approval_decision: str | None
+    approval_decision: ApprovalDecision | None
     rejection_reason: str | None
     reviewer: str | None
 

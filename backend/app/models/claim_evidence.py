@@ -1,9 +1,3 @@
-"""ORM model: ``claim_evidence``.
-
-Junction table linking a ``Claim`` to the ``DocumentChunk`` instances that
-support it. The composite uniqueness constraint prevents the same chunk from
-being attached twice to the same claim.
-"""
 from __future__ import annotations
 
 import uuid

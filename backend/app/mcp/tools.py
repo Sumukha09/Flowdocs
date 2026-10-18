@@ -1,15 +1,22 @@
 import uuid
 import os
 import threading
-from typing import List, Optional
+from typing import List
 
 from app.db.session import get_session_factory
 from app.api.deps import get_checkpointer
 from app.models.run import Run
 from app.models.finding import Finding
 from app.models.document import Document
-from app.api.routes.runs import run_graph_background
-from app.workflow.graph import compile_workflow
+from app.services.run_workflow import (
+    create_run as create_run_record,
+    get_checkpoint_state,
+    mark_run_running,
+    queue_document_paths,
+    review_finding as apply_finding_review,
+    update_approval_checkpoint,
+)
+from app.services.workflow_runner import run_graph_background
 
 def _get_run_or_raise(session, run_id: str) -> Run:
     try:
@@ -38,18 +45,8 @@ def register_tools(mcp):
             
         session_factory = get_session_factory()
         with session_factory() as session:
-            run = Run(status="running", input_metadata={
-                "file_paths": file_paths,
-                "compliance_rules": compliance_rules
-            })
-            session.add(run)
-            session.commit()
-            run_id_str = str(run.id)
-            
-        initial_state = {
-            "run_id": run_id_str,
-            "current_stage": "ingest",
-        }
+            initial_state = create_run_record(session, file_paths, compliance_rules)
+            run_id_str = initial_state["run_id"]
         
         # Start graph background execution
         threading.Thread(target=run_graph_background, args=(run_id_str, initial_state), daemon=True).start()
@@ -83,15 +80,7 @@ def register_tools(mcp):
         checkpointer_gen = get_checkpointer()
         checkpointer = next(checkpointer_gen)
         try:
-            graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
-            thread_config = {"configurable": {"thread_id": run_id}}
-            
-            state_snapshot = graph.get_state(thread_config)
-            
-            if state_snapshot and state_snapshot.values:
-                state = dict(state_snapshot.values)
-            else:
-                state = {"run_id": run_id, "current_stage": "ingest"}
+            state = get_checkpoint_state(checkpointer, run_id)
                 
             session_factory = get_session_factory()
             with session_factory() as session:
@@ -124,8 +113,7 @@ def register_tools(mcp):
             if run.status == "completed":
                 raise ValueError(f"Cannot resume a completed run.")
                 
-            run.status = "running"
-            session.commit()
+            mark_run_running(session, run)
             
         # Start graph background execution from checkpoint (None initial state triggers resume)
         threading.Thread(target=run_graph_background, args=(run_id, None), daemon=True).start()
@@ -174,15 +162,12 @@ def register_tools(mcp):
             if not added_docs:
                 return {"run_id": run_id, "message": "All documents already exist in the run.", "added_documents": []}
                 
-            run.status = "running"
-            meta = dict(run.input_metadata or {})
-            existing_paths = meta.get("file_paths", [])
-            for doc in added_docs:
-                if doc["path"] not in existing_paths:
-                    existing_paths.append(doc["path"])
-            meta["file_paths"] = existing_paths
-            run.input_metadata = meta
-            session.commit()
+            queue_document_paths(
+                session,
+                run,
+                [doc["path"] for doc in added_docs],
+                deduplicate_paths=True,
+            )
             
         # Resume the workflow so ingest node picks up the new files
         threading.Thread(target=run_graph_background, args=(run_id, None), daemon=True).start()
@@ -222,51 +207,30 @@ def register_tools(mcp):
         """
         session_factory = get_session_factory()
         with session_factory() as session:
-            finding = session.query(Finding).filter(
-                Finding.id == uuid.UUID(finding_id), 
-                Finding.run_id == uuid.UUID(run_id)
-            ).with_for_update().first()
-            
-            if not finding:
-                raise ValueError("Finding not found for this run.")
-                
-            if finding.status != "pending":
-                raise ValueError(f"Finding has already been reviewed (current status: {finding.status}).")
-                
-            if decision == "approve":
-                finding.status = "approved"
-            elif decision == "reject":
-                finding.status = "rejected"
-            else:
-                raise ValueError(f"Invalid decision: {decision}. Must be 'approve' or 'reject'.")
-                
-            session.commit()
-            
-            pending_count = session.query(Finding).filter(
-                Finding.run_id == uuid.UUID(run_id), 
-                Finding.status == "pending"
-            ).count()
+            finding_uuid = uuid.UUID(finding_id)
+            run_uuid = uuid.UUID(run_id)
+            review = apply_finding_review(
+                session,
+                run_uuid,
+                finding_uuid,
+                decision,
+            )
+            pending_count = review.pending_count
+            finding_status = review.status
             
         if pending_count == 0:
             # All findings are reviewed! Update the graph state and resume.
             checkpointer_gen = get_checkpointer()
             checkpointer = next(checkpointer_gen)
             try:
-                graph = compile_workflow(checkpointer=checkpointer, interrupt_before=["approval"])
-                thread_config = {"configurable": {"thread_id": run_id}}
-                
-                graph.update_state(
-                    thread_config,
-                    {"approval_decision": "approved", "reviewer": "mcp_machine"},
-                    as_node="verify"
-                )
+                update_approval_checkpoint(checkpointer, run_id, "mcp_machine")
                 
                 threading.Thread(target=run_graph_background, args=(run_id, None), daemon=True).start()
-                return {"finding_id": finding_id, "status": finding.status, "message": "All findings reviewed, workflow resumed."}
+                return {"finding_id": finding_id, "status": finding_status, "message": "All findings reviewed, workflow resumed."}
             finally:
                 checkpointer_gen.close()
             
-        return {"finding_id": finding_id, "status": finding.status, "message": f"{pending_count} findings remaining."}
+        return {"finding_id": finding_id, "status": finding_status, "message": f"{pending_count} findings remaining."}
 
     @mcp.tool()
     def get_report(run_id: str) -> dict:

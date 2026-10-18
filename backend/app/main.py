@@ -1,8 +1,4 @@
-"""FastAPI application entry point.
 
-The application is intentionally minimal at Step 1. It wires the health route
-and nothing else. New routers are added in later steps.
-"""
 from __future__ import annotations
 
 from fastapi import FastAPI
@@ -11,9 +7,9 @@ from contextlib import asynccontextmanager
 
 from app.api.routes.health import router as health_router
 from app.api.routes.runs import router as runs_router
-from app.api.routes.runs import run_graph_background
 from app.db.session import get_session_factory
 from app.models.run import Run
+from app.services.workflow_runner import run_graph_background
 
 from fastapi.middleware.cors import CORSMiddleware
 

@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getRunState, getRunDetails, addDocumentsToRun, resumeRun } from '../api';
+import useRunDetail from '../hooks/useRunDetail';
 import TaskRows from '../components/ui/TaskRows';
 import LoadingState from '../components/ui/LoadingState';
 import { AlertCircle, ChevronRight, FilePlus, Download } from 'lucide-react';
@@ -16,51 +15,17 @@ const STAGES = [
 
 export default function RunDetail() {
   const { id } = useParams();
-  const [state, setState] = useState(null);
-  const [details, setDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
-  
-  const [initialDocIds, setInitialDocIds] = useState(() => {
-    const saved = sessionStorage.getItem(`run_${id}_initial_docs`);
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState(null);
-  const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    let mounted = true;
-    
-    async function load() {
-      try {
-        const [s, d] = await Promise.all([
-          getRunState(id),
-          getRunDetails(id).catch(() => null)
-        ]);
-        if (mounted) {
-          setState(s);
-          setDetails(d);
-          setLoading(false);
-          
-          if (d && initialDocIds === null) {
-             const ids = d.documents.map(doc => doc.id);
-             setInitialDocIds(ids);
-             sessionStorage.setItem(`run_${id}_initial_docs`, JSON.stringify(ids));
-          }
-        }
-      } catch (e) {
-        console.error(e);
-        if (mounted) setLoading(false);
-      }
-    }
-    
-    load();
-    const interval = setInterval(load, 3000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [id, initialDocIds]);
+  const {
+    state,
+    details,
+    loading,
+    initialDocIds,
+    isUploading,
+    uploadError,
+    fileInputRef,
+    handleUpload,
+    handleResume,
+  } = useRunDetail(id);
 
   if (loading) {
     return <div className="p-4 sm:p-6 lg:p-8"><LoadingState label="Loading workflow state..." variant="Dots" /></div>;
@@ -77,47 +42,6 @@ export default function RunDetail() {
   const allDocs = details?.documents || [];
   const existingDocs = initialDocIds ? allDocs.filter(d => initialDocIds.includes(d.id)) : allDocs;
   const newDocs = initialDocIds ? allDocs.filter(d => !initialDocIds.includes(d.id)) : [];
-
-  const handleUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    
-    setIsUploading(true);
-    setUploadError(null);
-    try {
-      const uploadResp = await addDocumentsToRun(id, files);
-      
-      if (uploadResp && uploadResp.existing_documents) {
-        setInitialDocIds(uploadResp.existing_documents);
-        sessionStorage.setItem(`run_${id}_initial_docs`, JSON.stringify(uploadResp.existing_documents));
-      }
-      
-      // Fetch updated state immediately instead of waiting for the interval
-      const [s, d] = await Promise.all([
-        getRunState(id),
-        getRunDetails(id).catch(() => null)
-      ]);
-      setState(s);
-      setDetails(d);
-      
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } catch (err) {
-      setUploadError(err.message);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-  const handleResume = async (e) => {
-    e.preventDefault();
-    try {
-      await resumeRun(id);
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "Failed to resume operation");
-    }
-  };
 
   const completedStages = state.completed_stages || [];
   let actualFailedIndex = -1;

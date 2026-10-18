@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.workflow.state import Stage, Status
+
 
 class FileInput(BaseModel):
     file_path: str | None = Field(None, description="Absolute or relative path to the file to process.")
@@ -21,7 +23,7 @@ class RunCreateRequest(BaseModel):
 class RunResponse(BaseModel):
     """Standard representation of a run."""
     id: uuid.UUID = Field(..., description="The unique identifier for the run.")
-    status: str = Field(..., description="Current status (e.g. pending, running, failed).")
+    status: Status = Field(..., description="Current run status.")
     
     class Config:
         from_attributes = True
@@ -30,9 +32,9 @@ class RunResponse(BaseModel):
 class RunStateResponse(BaseModel):
     """The workflow state representation for a run."""
     run_id: uuid.UUID = Field(..., description="The unique identifier for the run.")
-    current_stage: str = Field(..., description="The current active stage in the graph.")
-    status: str | None = Field(default=None, description="The workflow execution status.")
-    completed_stages: list[str] = Field(default_factory=list, description="Stages that have successfully completed.")
+    current_stage: Stage = Field(..., description="The current active stage in the graph.")
+    status: Status | None = Field(default=None, description="The workflow execution status.")
+    completed_stages: list[Stage] = Field(default_factory=list, description="Stages that have successfully completed.")
     errors: list[str] | None = Field(default=None, description="Any errors encountered.")
     document_ids: list[str] | None = Field(default=None, description="IDs of processed documents.")
     ingested_document_ids: list[str] | None = Field(default=None, description="IDs of successfully ingested documents.")

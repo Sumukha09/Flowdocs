@@ -140,12 +140,6 @@ export async function resumeRun(runId) {
   return response.json();
 }
 
-export async function crashServer() {
-  await fetch(`${API_BASE_URL}/runs/crash`, {
-    method: 'POST',
-  });
-}
-
 export async function getGlobalStats() {
   const response = await fetch(`${API_BASE_URL}/runs/stats/global`);
   if (!response.ok) {
