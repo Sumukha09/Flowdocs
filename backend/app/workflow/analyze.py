@@ -48,7 +48,10 @@ def analyze_node(
             chunk = session.get(DocumentChunk, uuid.UUID(chunk_id_str))
             if chunk:
                 chunk_objs.append(chunk)
-                corpus_parts.append(f"--- Document Chunk {chunk.id} ---\n{chunk.text}")
+                document_name = chunk.document.name if chunk.document else "Unknown source document"
+                corpus_parts.append(
+                    f"--- source_chunk_id: {chunk.id}; source_document: {document_name} ---\n{chunk.text}"
+                )
                 
         # Collect old claims for context
         old_claims_text = ""
@@ -69,9 +72,24 @@ def analyze_node(
         corpus_text = "RAW SOURCE DOCUMENTS (CORPUS):\n" + "\n\n".join(corpus_parts) if corpus_parts else ""
         
         user_prompt = corpus_text + "\n\n" + old_claims_text + claims_text
+        user_prompt += """
+
+MANDATORY DOCUMENT AUDIT (perform this even when no compliance rules were supplied):
+Review every source document on its own, then compare the documents with each other.
+Find materially incompatible statements about the same subject, including conflicting
+durations, dates, amounts, parties, duties, or defined terms. Also check clear factual
+errors (including calculations, dates, and statements contradicted elsewhere) and clear
+legal errors when the document establishes the applicable jurisdiction and time period.
+For each issue, explain the conflict/error and provide exact supporting quote(s) with the
+source_chunk_id shown above each source section. A contradiction needs evidence for both
+sides. For legal issues, name the applicable rule and flag only high-confidence conflicts;
+if the jurisdiction, effective date, or rule is unclear, omit the issue. Do not report
+style, terminology alignment, generic best practices, or a merely unusual statement.
+Return no finding when the documents are internally consistent and no clear error exists.
+"""
         if compliance_rules:
             user_prompt += f"\n\nIMPORTANT COMPLIANCE RULES TO CHECK AGAINST:\n{compliance_rules}\n"
-            user_prompt += "\nPlease evaluate every compliance rule against the RAW SOURCE DOCUMENTS. You MUST consider the Existing Baseline Claims and New Extracted Claims to detect if a new claim contradicts an existing one. Create a finding for any discrepancy, violation, contradiction, or notable alignment."
+            user_prompt += "\nEvaluate each compliance rule against the RAW SOURCE DOCUMENTS. Consider extracted claims only to identify concrete contradictions. Report violations and material contradictions; do not report mere alignment or terminology consistency."
         
         # Check budget
         total_tokens_used = state.get("total_tokens_used", 0)
@@ -107,18 +125,43 @@ def analyze_node(
                 compliance_checks_passed = state.get("compliance_checks_passed", 0)
                 
                 for f_info in parsed.findings:
+                    # Findings must be grounded in this run's extracted claims or in a
+                    # verbatim quote from a source chunk. An explicit missing-rule
+                    # result is the one valid finding that has no positive evidence.
+                    valid_cids = [cid for cid in getattr(f_info, "claim_ids", []) if cid in extracted_claim_ids]
+                    new_claims_data = getattr(f_info, "new_claims", [])
+                    quote_matches = []
+                    for nc_data in new_claims_data:
+                        quote = (nc_data.exact_quote or "").strip()
+                        if not quote:
+                            continue
+                        candidates = [
+                            chunk for chunk in chunk_objs
+                            if (not nc_data.source_chunk_id or str(chunk.id) == nc_data.source_chunk_id)
+                            and quote in chunk.text
+                        ]
+                        # A model-supplied ID must resolve to the exact quoted text.
+                        # Without an ID, accept only an unambiguous single source.
+                        if len(candidates) == 1:
+                            quote_matches.append((nc_data, candidates[0]))
+
+                    has_compliance_context = bool(compliance_rules and compliance_rules.strip())
+                    is_missing_requirement = (
+                        has_compliance_context
+                        and any(
+                            marker in f"{f_info.title} {f_info.summary}".lower()
+                            for marker in ("missing", "absent", "not present")
+                        )
+                        and getattr(f_info, "severity", None) != "passed"
+                        and not valid_cids
+                        and not quote_matches
+                    )
+                    if not valid_cids and not quote_matches and not is_missing_requirement:
+                        continue
+
                     compliance_checks_total += 1
                     if getattr(f_info, "severity", None) == "passed":
                         compliance_checks_passed += 1
-                        # We still want to create a finding so the human can review the passed check!
-                        # We just increment the counter.
-
-                    # Only create finding if it references valid extracted claims OR has new_claims (e.g. for missing requirements)
-                    valid_cids = [cid for cid in getattr(f_info, "claim_ids", []) if cid in extracted_claim_ids]
-                    new_claims_data = getattr(f_info, "new_claims", [])
-                    
-                    if not valid_cids and not new_claims_data:
-                        print(f"[DEBUG] Finding '{f_info.title}' has no valid claims or new claims, but keeping it anyway.")
                         
                     finding = Finding(
                         run_id=run_id,
@@ -138,18 +181,8 @@ def analyze_node(
                             
                     # Process new claims (e.g. evidence of absence)
                     seen_claims = set()
-                    for nc_data in new_claims_data:
-                        # Determine best chunk to attach evidence to
-                        matched_chunk = None
-                        if nc_data.exact_quote:
-                            for chunk in chunk_objs:
-                                if nc_data.exact_quote in chunk.text:
-                                    matched_chunk = chunk
-                                    break
-                        if not matched_chunk and chunk_objs:
-                            matched_chunk = chunk_objs[0] # Fallback
-                            
-                        chunk_id_str = str(matched_chunk.id) if matched_chunk else "none"
+                    for nc_data, matched_chunk in quote_matches:
+                        chunk_id_str = str(matched_chunk.id)
                         claim_sig = (nc_data.statement.strip().lower(), chunk_id_str)
                         if claim_sig in seen_claims:
                             continue

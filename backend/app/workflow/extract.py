@@ -70,6 +70,9 @@ def extract_node(
                     continue
                     
                 for extracted_claim in parsed.claims:
+                    exact_quote = (extracted_claim.exact_quote or "").strip()
+                    if not exact_quote or exact_quote not in chunk.text:
+                        continue
                     claim = Claim(
                         run_id=uuid.UUID(state.get("run_id")),
                         statement=extracted_claim.statement,
@@ -81,7 +84,7 @@ def extract_node(
                     evidence = ClaimEvidence(
                         claim_id=claim.id,
                         chunk_id=chunk.id,
-                        snippet=extracted_claim.exact_quote,
+                        snippet=exact_quote,
                     )
                     session.add(evidence)
                     extracted_claim_ids.append(str(claim.id))

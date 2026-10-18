@@ -18,13 +18,15 @@ from app.services.audit import create_audit_log
 from app.workflow.graph import compile_workflow
 
 
-def create_run(session: Session, file_paths: list[str], compliance_rules: str | None) -> dict:
+def create_run(session: Session, file_paths: list[str], compliance_rules: str) -> dict:
     """Persist a new run and return the initial graph state."""
+    if not compliance_rules or not compliance_rules.strip():
+        raise ValueError("Compliance rules are required and cannot be blank.")
     run = Run(
         status="running",
         input_metadata={
             "file_paths": file_paths,
-            "compliance_rules": compliance_rules,
+            "compliance_rules": compliance_rules.strip(),
         },
     )
     session.add(run)

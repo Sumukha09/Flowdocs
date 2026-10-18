@@ -81,7 +81,7 @@ def ingest_node(
             name = os.path.basename(file_path)
             
             # Check for duplicate hash
-            existing = session.query(Document).filter_by(hash=file_hash).first()
+            existing = session.query(Document).filter_by(run_id=run.id, hash=file_hash, name=name).first()
             if existing:
                 all_doc_ids.append(str(existing.id))
                 chunks = session.query(DocumentChunk).filter_by(document_id=existing.id).all()
@@ -140,7 +140,7 @@ def ingest_node(
                 all_chunk_ids.extend([str(c.id) for c in db_chunks])
             except IntegrityError as e:
                 session.rollback()
-                existing = session.query(Document).filter_by(hash=file_hash).first()
+                existing = session.query(Document).filter_by(run_id=run.id, hash=file_hash, name=name).first()
                 if existing:
                     all_doc_ids.append(str(existing.id))
                     chunks = session.query(DocumentChunk).filter_by(document_id=existing.id).all()

@@ -25,6 +25,10 @@ export default function Dashboard() {
     if (files.length === 0 && !manualPath.trim()) {
         return;
     }
+    if (!complianceRules.trim()) {
+      setError('Compliance rules are required before starting a run.');
+      return;
+    }
     
     setIsCreating(true);
     setError(null);
@@ -49,7 +53,7 @@ export default function Dashboard() {
          payloadFiles.push({ path: manualPath.trim() });
       }
 
-      const data = await createRun(payloadFiles, complianceRules.trim() ? complianceRules.trim() : null);
+      const data = await createRun(payloadFiles, complianceRules.trim());
       console.log("[DEBUG] createRun returned successfully. Data:", data);
       
       console.log("[DEBUG] Navigating to /runs/" + data.run_id);
@@ -210,25 +214,27 @@ export default function Dashboard() {
 
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3">
-                    Compliance Playbook [OPTIONAL]
+                    Compliance Playbook [REQUIRED]
                   </label>
                   <textarea
                     value={complianceRules}
                     onChange={(e) => setComplianceRules(e.target.value)}
+                    required
                     className="w-full bg-[#0A0A0A] border border-[#333333] text-white px-4 py-4 text-sm focus:outline-none focus:border-brand-500 transition-colors font-mono tracking-wide h-32 resize-none"
-                    placeholder="PASTE COMPLIANCE RULES HERE..."
+                    placeholder="PASTE THE COMPLIANCE RULES TO CHECK HERE..."
                   />
+                  <p className="mt-2 text-[10px] uppercase tracking-widest text-slate-500">Required to start an analysis.</p>
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={isCreating || (files.length === 0 && !manualPath.trim())}
+                disabled={isCreating || (files.length === 0 && !manualPath.trim()) || !complianceRules.trim()}
                 className={cn(
                   "w-full flex items-center justify-center py-5 px-6 text-sm font-bold uppercase tracking-widest transition-all duration-300 clip-corner mt-4",
                   isCreating 
                     ? "bg-[#333333] text-slate-500 cursor-not-allowed"
-                    : (files.length === 0 && !manualPath.trim())
+                    : ((files.length === 0 && !manualPath.trim()) || !complianceRules.trim())
                       ? "bg-[#1A1A1A] text-slate-500 border border-[#333333] cursor-not-allowed"
                       : "bg-brand-500 hover:bg-brand-600 text-[#0A0A0A] shadow-[0_0_20px_rgba(255,107,0,0.2)] hover:shadow-[0_0_30px_rgba(255,107,0,0.4)]"
                 )}

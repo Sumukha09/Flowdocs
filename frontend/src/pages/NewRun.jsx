@@ -14,6 +14,10 @@ export default function NewRun() {
   const handleCreateRun = async (e) => {
     if (e) e.preventDefault();
     if (files.length === 0) return;
+    if (!complianceRules.trim()) {
+      setError('Compliance rules are required before starting a run.');
+      return;
+    }
     
     setIsCreating(true);
     setError(null);
@@ -29,7 +33,7 @@ export default function NewRun() {
         payloadFiles.push({ name: f.name, base64 });
       }
 
-      const data = await createRun(payloadFiles, complianceRules.trim() ? complianceRules.trim() : null);
+      const data = await createRun(payloadFiles, complianceRules.trim());
       navigate(`/runs/${data.run_id}`);
     } catch (err) {
       console.error(err);
@@ -143,22 +147,24 @@ export default function NewRun() {
         <div className="rounded-card border border-line bg-surface p-4 shadow-card sm:p-6">
            <h2 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">Compliance Configuration</h2>
            <label className="block text-xs font-semibold text-ink-3 uppercase mb-2">
-             Custom Rules (Optional)
+             Custom Rules (Required)
            </label>
            <textarea
              value={complianceRules}
              onChange={(e) => setComplianceRules(e.target.value)}
+             required
              className="w-full bg-inset border border-line rounded-control text-ink p-3 text-sm focus:outline-none focus:border-accent transition-colors resize-y min-h-[120px]"
-             placeholder="Enter specific compliance rules or policies to check against..."
+             placeholder="Enter the compliance rules or policies to check against..."
            />
+           <p className="mt-2 text-xs text-ink-3">Required to start an analysis.</p>
         </div>
 
         <div className="flex justify-end pt-2 sm:pt-4">
            <button
              type="submit"
-             disabled={isCreating || files.length === 0}
+             disabled={isCreating || files.length === 0 || !complianceRules.trim()}
              className={`flex w-full items-center justify-center gap-2 rounded-control px-6 py-3 text-sm font-bold shadow-btn transition-colors sm:w-auto
-               ${isCreating || files.length === 0 
+               ${isCreating || files.length === 0 || !complianceRules.trim()
                  ? "bg-field text-ink-3 cursor-not-allowed" 
                  : "bg-accent text-white hover:bg-accent-ink"}`}
            >

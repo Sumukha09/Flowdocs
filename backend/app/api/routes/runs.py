@@ -57,8 +57,8 @@ def create_run(
             import os
             
             content = base64.b64decode(f.file_content_base64)
-            name = f.file_name or "uploaded_doc.pdf"
-            upload_dir = os.path.join(os.getcwd(), "uploads")
+            name = os.path.basename(f.file_name or "uploaded_doc.pdf")
+            upload_dir = os.path.join(os.getcwd(), "uploads", str(uuid.uuid4()))
             os.makedirs(upload_dir, exist_ok=True)
             path = os.path.join(upload_dir, name)
             with open(path, "wb") as file_out:
@@ -108,7 +108,7 @@ def add_documents_to_run(
     # Read files and hash them
     new_paths = []
     response_docs = []
-    upload_dir = os.path.join(os.getcwd(), "uploads")
+    upload_dir = os.path.join(os.getcwd(), "uploads", str(run_id), str(uuid.uuid4()))
     os.makedirs(upload_dir, exist_ok=True)
     
     for f in files:
@@ -126,7 +126,8 @@ def add_documents_to_run(
         file_hash = hashlib.sha256(content).hexdigest()
         
         # Check if already added to this run
-        existing_doc = db.query(Document).filter_by(hash=file_hash, run_id=run.id).first()
+        source_name = os.path.basename(f.filename)
+        existing_doc = db.query(Document).filter_by(hash=file_hash, run_id=run.id, name=source_name).first()
         if existing_doc:
             response_docs.append({
                 "document_id": str(existing_doc.id),
@@ -136,7 +137,9 @@ def add_documents_to_run(
             continue
             
         # Save file to disk
-        path = os.path.join(upload_dir, f.filename)
+        file_dir = os.path.join(upload_dir, str(uuid.uuid4()))
+        os.makedirs(file_dir, exist_ok=True)
+        path = os.path.join(file_dir, source_name)
         with open(path, "wb") as out_file:
             out_file.write(content)
             

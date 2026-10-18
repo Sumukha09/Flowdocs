@@ -2,7 +2,7 @@
 
 A document is a logical input to a run. Each document is identified by a
 content hash so the system can deduplicate uploads within the same run.
-``hash`` is unique across the table; ``metadata_json`` carries free-form
+``hash`` is unique within a run; ``metadata_json`` carries free-form
 context such as source URL, MIME type, or extractor version.
 """
 
@@ -27,7 +27,7 @@ class Document(Base):
 
     __tablename__ = "documents"
     __table_args__ = (
-        UniqueConstraint("hash", name="uq_documents_hash"),
+        UniqueConstraint("run_id", "hash", "name", name="uq_documents_run_hash_name"),
         Index("ix_documents_run_id", "run_id"),
         Index("ix_documents_created_at", "created_at"),
     )

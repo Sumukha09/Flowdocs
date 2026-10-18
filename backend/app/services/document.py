@@ -38,7 +38,7 @@ def get_or_create_document(session: Session, run_id: uuid.UUID, file_path: str) 
     name = os.path.basename(file_path)
 
     # Fast path: check for duplicate hash
-    existing = session.query(Document).filter_by(hash=file_hash).first()
+    existing = session.query(Document).filter_by(run_id=run_id, hash=file_hash, name=name).first()
     if existing:
         return existing
 
@@ -57,7 +57,7 @@ def get_or_create_document(session: Session, run_id: uuid.UUID, file_path: str) 
     except IntegrityError as e:
         session.rollback()
         # Race condition handling: check if someone else inserted it while we were trying
-        existing = session.query(Document).filter_by(hash=file_hash).first()
+        existing = session.query(Document).filter_by(run_id=run_id, hash=file_hash, name=name).first()
         if existing:
             return existing
         else:

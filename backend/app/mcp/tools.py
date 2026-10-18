@@ -30,18 +30,20 @@ def _get_run_or_raise(session, run_id: str) -> Run:
 
 def register_tools(mcp):
     @mcp.tool()
-    def create_run(file_paths: List[str], compliance_rules: str = None) -> dict:
+    def create_run(file_paths: List[str], compliance_rules: str) -> dict:
         """Create a new document processing run.
         
         Args:
             file_paths: List of absolute file paths to process.
-            compliance_rules: Optional rules or playbook.
+            compliance_rules: Required rules or playbook to evaluate the documents against.
             
         Returns:
             dict: Initial run state.
         """
         if not file_paths:
             raise ValueError("Must provide at least one valid file_path.")
+        if not compliance_rules or not compliance_rules.strip():
+            raise ValueError("Compliance rules are required and cannot be blank.")
             
         session_factory = get_session_factory()
         with session_factory() as session:
@@ -146,18 +148,15 @@ def register_tools(mcp):
                 # Check if this exact file is already in the run
                 existing_doc = session.query(Document).filter(
                     Document.run_id == run.id,
-                    Document.content_hash == content_hash
+                    Document.hash == content_hash,
+                    Document.name == os.path.basename(path),
                 ).first()
                 
                 if not existing_doc:
-                    doc = Document(
-                        run_id=run.id,
-                        name=os.path.basename(path),
-                        content_hash=content_hash,
-                        byte_size=len(content)
-                    )
-                    session.add(doc)
-                    added_docs.append({"name": doc.name, "path": path, "byte_size": doc.byte_size})
+                    # Let ingest_node create the document and its chunks together.
+                    # Pre-creating a document here makes ingest treat it as a
+                    # duplicate and skip parsing/chunk creation.
+                    added_docs.append({"name": os.path.basename(path), "path": path, "byte_size": len(content)})
             
             if not added_docs:
                 return {"run_id": run_id, "message": "All documents already exist in the run.", "added_documents": []}

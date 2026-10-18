@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.workflow.state import Stage, Status
 
@@ -17,7 +17,14 @@ class FileInput(BaseModel):
 class RunCreateRequest(BaseModel):
     """Payload to start a new document processing run."""
     files: list[FileInput] = Field(default_factory=list, description="List of files to process.")
-    compliance_rules: str | None = Field(None, description="Custom compliance rules or playbook for the analysis.")
+    compliance_rules: str = Field(..., min_length=1, description="Required compliance rules or playbook for the analysis.")
+
+    @field_validator("compliance_rules", mode="before")
+    @classmethod
+    def require_nonblank_compliance_rules(cls, value: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("Compliance rules are required and cannot be blank.")
+        return value.strip()
 
 
 class RunResponse(BaseModel):
