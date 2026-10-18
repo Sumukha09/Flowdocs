@@ -10,7 +10,6 @@ import RunFindings from './pages/RunFindings';
 import RunApprovals from './pages/RunApprovals';
 import RunDeliverable from './pages/RunDeliverable';
 import RunAudit from './pages/RunAudit';
-import Health from './pages/Health';
 
 function App() {
   return (
@@ -27,7 +26,6 @@ function App() {
           <Route path="/runs/:id/approvals" element={<RunApprovals />} />
           <Route path="/runs/:id/deliverable" element={<RunDeliverable />} />
           <Route path="/runs/:id/audit" element={<RunAudit />} />
-          <Route path="/health" element={<Health />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

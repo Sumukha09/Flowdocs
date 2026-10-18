@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createRun } from '../api';
-import { FileUp, Loader2, AlertCircle, UploadCloud, FileText, X, ChevronRight, PlayCircle } from 'lucide-react';
+import { Loader2, AlertCircle, UploadCloud, FileText, X, ChevronRight, PlayCircle } from 'lucide-react';
 
 export default function NewRun() {
   const navigate = useNavigate();
@@ -62,15 +62,15 @@ export default function NewRun() {
   }, []);
 
   return (
-    <div className="p-8 pb-20 max-w-4xl mx-auto space-y-8">
-      <div className="flex items-center text-xs text-ink-3 font-mono mb-2">
+    <div className="mx-auto max-w-4xl space-y-6 p-4 pb-20 sm:space-y-8 sm:p-6 sm:pb-20 lg:p-8 lg:pb-20">
+      <div className="mb-2 flex flex-wrap items-center gap-y-1 text-xs font-mono text-ink-3">
         <Link to="/" className="hover:text-ink hover:underline">Overview</Link>
         <ChevronRight size={12} className="mx-1" />
         <span>New Run</span>
       </div>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Initialize Workflow</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl text-ink">Initialize Workflow</h1>
         <p className="text-sm text-ink-3 mt-1">Upload documents and configure compliance rules for analysis.</p>
       </div>
 
@@ -85,11 +85,11 @@ export default function NewRun() {
       )}
 
       <form onSubmit={handleCreateRun} className="space-y-6">
-        <div className="rounded-card bg-surface shadow-card border border-line p-6 space-y-6">
+        <div className="space-y-6 rounded-card border border-line bg-surface p-4 shadow-card sm:p-6">
            <div>
               <h2 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">Source Documents</h2>
               <div 
-                className={`relative border-2 border-dashed rounded-card p-10 transition-colors duration-200 text-center flex flex-col items-center justify-center min-h-[160px]
+                className={`relative flex min-h-40 flex-col items-center justify-center rounded-card border-2 border-dashed p-6 text-center transition-colors duration-200 sm:p-10
                   ${isDragging ? "border-accent bg-accent-tint" : "border-line bg-inset hover:border-ink-3"}`}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
@@ -122,10 +122,10 @@ export default function NewRun() {
              <div className="space-y-2">
                <h3 className="text-xs font-semibold text-ink-3 uppercase tracking-wider mb-2">Staged Payload</h3>
                {files.map(f => (
-                 <div key={f.id} className="flex items-center justify-between bg-canvas border border-line rounded-control p-3">
-                   <div className="flex items-center">
+                 <div key={f.id} className="flex min-w-0 items-center justify-between gap-2 rounded-control border border-line bg-canvas p-3">
+                   <div className="flex min-w-0 items-center">
                      <FileText size={16} className="text-ink-3 mr-3 shrink-0" />
-                     <span className="text-sm text-ink font-medium truncate max-w-[300px]">{f.name}</span>
+                     <span className="max-w-full truncate text-sm font-medium text-ink sm:max-w-72">{f.name}</span>
                    </div>
                    <button 
                      type="button" 
@@ -140,7 +140,7 @@ export default function NewRun() {
            )}
         </div>
 
-        <div className="rounded-card bg-surface shadow-card border border-line p-6">
+        <div className="rounded-card border border-line bg-surface p-4 shadow-card sm:p-6">
            <h2 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">Compliance Configuration</h2>
            <label className="block text-xs font-semibold text-ink-3 uppercase mb-2">
              Custom Rules (Optional)
@@ -153,11 +153,11 @@ export default function NewRun() {
            />
         </div>
 
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-2 sm:pt-4">
            <button
              type="submit"
              disabled={isCreating || files.length === 0}
-             className={`flex items-center gap-2 px-6 py-2.5 rounded-[8px] text-sm font-bold shadow-btn transition-colors
+             className={`flex w-full items-center justify-center gap-2 rounded-control px-6 py-3 text-sm font-bold shadow-btn transition-colors sm:w-auto
                ${isCreating || files.length === 0 
                  ? "bg-field text-ink-3 cursor-not-allowed" 
                  : "bg-accent text-white hover:bg-accent-ink"}`}

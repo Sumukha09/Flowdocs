@@ -24,15 +24,15 @@ export default function RunDeliverable() {
     load();
   }, [id]);
 
-  if (loading) return <div className="p-8"><LoadingState label="Loading deliverable..." /></div>;
-  if (!details) return <div className="p-8">Failed to load run details.</div>;
+  if (loading) return <div className="p-4 sm:p-6 lg:p-8"><LoadingState label="Loading deliverable..." /></div>;
+  if (!details) return <div className="p-4 sm:p-6 lg:p-8">Failed to load run details.</div>;
 
   const approvedFindings = details.findings.filter(f => f.status === 'approved');
 
   return (
-    <div className="deliverable-layout p-8 max-w-6xl mx-auto flex gap-8 pb-20">
-      <div className="flex-1 space-y-8">
-         <div className="flex items-center text-xs text-ink-3 font-mono mb-2">
+    <div className="deliverable-layout mx-auto flex max-w-6xl flex-col gap-6 p-4 pb-20 sm:gap-8 sm:p-6 sm:pb-20 lg:flex-row lg:p-8 lg:pb-20">
+      <div className="min-w-0 flex-1 space-y-6 sm:space-y-8">
+         <div className="mb-2 flex flex-wrap items-center gap-y-1 text-xs font-mono text-ink-3">
             <Link to="/runs" className="hover:text-ink hover:underline">Runs</Link>
             <ChevronRight size={12} className="mx-1" />
             <Link to={`/runs/${id}`} className="hover:text-ink hover:underline">{id.substring(0,8)}</Link>
@@ -41,32 +41,32 @@ export default function RunDeliverable() {
          </div>
          
          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-ink flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl text-ink flex items-center gap-2">
                <FileText className="text-accent" /> Grounded Deliverable
             </h1>
             <p className="text-sm text-ink-3 mt-1">Final output with full evidence traceability.</p>
          </div>
 
-         <div className="bg-white rounded-card shadow-card border border-line overflow-hidden text-black font-sans leading-relaxed">
-            <div className="p-12">
+         <div className="bg-surface rounded-card shadow-card border border-line overflow-hidden text-ink font-sans leading-relaxed">
+            <div className="p-5 sm:p-8 xl:p-12">
                <h2 className="text-2xl font-bold mb-6 border-b pb-4">Verification Report</h2>
                
                {approvedFindings.length === 0 ? (
-                  <p className="text-gray-600">No verified findings to report. The corpus is clean.</p>
+                  <p className="text-ink-2">No verified findings to report. The corpus is clean.</p>
                ) : (
                   <div className="space-y-8">
                      {approvedFindings.map(finding => (
                         <div key={finding.id} className="space-y-3">
                            <h3 className="text-lg font-semibold">{finding.title}</h3>
-                           <p className="text-gray-700">{finding.summary}</p>
+                           <p className="text-ink-2">{finding.summary}</p>
                            
                            <ul className="list-disc pl-5 space-y-2">
                               {finding.claims.map(claim => (
-                                 <li key={claim.id} className="text-gray-800">
+                                 <li key={claim.id} className="text-ink">
                                     {claim.statement}
                                     <button 
                                        onClick={() => setActiveEvidence(claim.evidence)}
-                                       className="ml-2 inline-flex items-center gap-1 text-[10px] font-mono bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200 hover:bg-blue-100 transition-colors"
+                                       className="ml-2 inline-flex items-center gap-1 text-[10px] font-mono bg-accent-tint text-accent-ink px-1.5 py-0.5 rounded border border-accent/20 hover:bg-hover-2 transition-colors"
                                     >
                                        [Evidence]
                                     </button>
@@ -82,8 +82,8 @@ export default function RunDeliverable() {
       </div>
       
       {/* Evidence Sidebar */}
-      <div className="w-80 shrink-0">
-         <div className="sticky top-8 bg-surface rounded-card border border-line shadow-card p-4 h-[calc(100vh-120px)] flex flex-col">
+      <div className="w-full shrink-0 lg:w-80">
+         <div className="flex h-64 flex-col rounded-card border border-line bg-surface p-4 shadow-card sm:h-72 lg:sticky lg:top-8 lg:h-[calc(100svh-8rem)]">
             <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4 border-b border-line pb-2 flex items-center gap-2">
                <CheckCircle size={16} className="text-green" /> Traceability
             </h3>

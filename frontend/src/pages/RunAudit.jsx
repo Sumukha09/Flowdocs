@@ -28,11 +28,11 @@ export default function RunAudit() {
     load();
   }, [id]);
 
-  if (loading) return <div className="p-8"><LoadingState label="Loading audit and cost data..." /></div>;
+  if (loading) return <div className="p-4 sm:p-6 lg:p-8"><LoadingState label="Loading audit and cost data..." /></div>;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8 pb-20">
-      <div className="flex items-center text-xs text-ink-3 font-mono mb-2">
+    <div className="mx-auto max-w-6xl space-y-6 p-4 pb-20 sm:space-y-8 sm:p-6 sm:pb-20 lg:p-8 lg:pb-20">
+      <div className="mb-2 flex flex-wrap items-center gap-y-1 text-xs font-mono text-ink-3">
         <Link to="/runs" className="hover:text-ink hover:underline">Runs</Link>
         <ChevronRight size={12} className="mx-1" />
         <Link to={`/runs/${id}`} className="hover:text-ink hover:underline">{id.substring(0,8)}</Link>
@@ -40,10 +40,10 @@ export default function RunAudit() {
         <span>Changelog / Cost</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-ink flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl text-ink flex items-center gap-2">
               <History className="text-ink" /> Living Changelog
             </h1>
             <p className="text-sm text-ink-3 mt-1">Chronological trace of agent and human actions.</p>
@@ -51,11 +51,11 @@ export default function RunAudit() {
 
           <div className="rounded-card bg-surface border border-line shadow-card overflow-hidden">
              {auditLogs.length === 0 ? (
-               <div className="p-8 text-center text-ink-3 text-sm">No audit logs available.</div>
+               <div className="p-5 text-center text-sm text-ink-3 sm:p-8">No audit logs available.</div>
              ) : (
                <div className="divide-y divide-line">
                   {auditLogs.map((log) => (
-                    <div key={log.id} className="p-4 flex gap-4 hover:bg-hover transition-colors">
+                    <div key={log.id} className="flex gap-3 p-3 transition-colors hover:bg-hover sm:gap-4 sm:p-4">
                        <div className="shrink-0 mt-0.5">
                           <Clock size={16} className="text-ink-3" />
                        </div>
@@ -80,7 +80,7 @@ export default function RunAudit() {
 
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-ink flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl text-ink flex items-center gap-2">
               <DollarSign className="text-green" /> Cost Observer
             </h1>
             <p className="text-sm text-ink-3 mt-1">LLM token usage and estimated cost.</p>

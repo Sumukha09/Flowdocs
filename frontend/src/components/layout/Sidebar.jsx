@@ -29,31 +29,27 @@ export default function Sidebar() {
     { to: `/runs/${runId}/audit`, icon: History, label: 'Changelog / Cost' },
   ] : [];
 
-  const systemLinks = [
-    { to: '/health', icon: Activity, label: 'System Health' },
-  ];
-
   return (
-    <aside className="app-sidebar flex flex-col">
-      <div className="px-5 py-[18px] border-b border-line flex items-center gap-3">
-        <div className="size-9 rounded-xl bg-accent text-white flex items-center justify-center shadow-btn"><Workflow size={18} /></div>
+    <aside className="app-sidebar flex w-full shrink-0 flex-col lg:h-full lg:w-60">
+      <div className="sidebar-brand flex items-center gap-3 border-b px-4 py-3 sm:px-5 lg:py-[18px]">
+        <div className="sidebar-mark size-9 rounded-xl flex items-center justify-center"><Workflow size={18} /></div>
         <div>
-          <span className="block font-bold tracking-tight text-ink leading-tight">FlowDocs</span>
-          <span className="block text-[10px] text-ink-3 mt-0.5 tracking-[.12em] uppercase">Review workspace</span>
+          <span className="block font-bold tracking-tight leading-tight">FlowDocs</span>
+          <span className="sidebar-caption block text-[10px] mt-0.5 tracking-[.12em]">DOCUMENT REVIEW</span>
         </div>
       </div>
 
-      <nav className="sidebar-links flex-1 overflow-y-auto py-5 px-3 space-y-7">
-        <section>
-          <div className="sidebar-group-label px-3 mb-2 text-[10px] font-bold text-ink-3 uppercase tracking-[.16em]">Workspace</div>
-          <div className="sidebar-link-list space-y-1">
+      <nav className="sidebar-links flex flex-1 gap-2 overflow-x-auto px-3 py-2 lg:flex-col lg:gap-7 lg:overflow-x-hidden lg:overflow-y-auto lg:py-7">
+        <section className="shrink-0">
+          <div className="sidebar-group-label mb-2 hidden px-3 text-[10px] font-bold uppercase tracking-[.16em] lg:block">Workspace</div>
+          <div className="sidebar-link-list flex gap-1 lg:flex-col">
             {globalLinks.map(link => (
               <NavLink 
                 key={link.to} 
                 to={link.to}
                 className={({ isActive }) =>
-                  `sidebar-link flex items-center gap-3 px-3 py-2.5 text-[13px] rounded-control transition-colors ${
-                    isActive ? 'bg-accent-tint text-accent-ink font-semibold' : 'text-ink-2 hover:bg-hover hover:text-ink'
+                `sidebar-link flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-control px-3 py-2 text-[12px] transition-colors lg:w-full lg:gap-3 lg:px-3 lg:py-2.5 lg:text-[13px] ${
+                    isActive ? 'is-active font-semibold' : ''
                   }`
                 }
               >
@@ -65,19 +61,19 @@ export default function Sidebar() {
         </section>
 
         {runLinks.length > 0 && (
-          <section>
-            <div className="sidebar-group-label px-3 mb-2 text-[10px] font-bold text-ink-3 uppercase tracking-[.16em] truncate" title={`Run Context: ${runId}`}>
+          <section className="shrink-0">
+            <div className="sidebar-group-label mb-2 hidden truncate px-3 text-[10px] font-bold uppercase tracking-[.16em] lg:block" title={`Run Context: ${runId}`}>
               Active Run
             </div>
-            <div className="sidebar-link-list space-y-1">
+            <div className="sidebar-link-list flex gap-1 lg:flex-col">
               {runLinks.map(link => (
                 <NavLink 
                   key={link.to} 
                   to={link.to}
                   end
                   className={({ isActive }) =>
-                    `sidebar-link flex items-center gap-3 px-3 py-2.5 text-[13px] rounded-control transition-colors ${
-                      isActive ? 'bg-accent-tint text-accent-ink font-semibold' : 'text-ink-2 hover:bg-hover hover:text-ink'
+                    `sidebar-link flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-control px-3 py-2 text-[12px] transition-colors lg:w-full lg:gap-3 lg:px-3 lg:py-2.5 lg:text-[13px] ${
+                      isActive ? 'is-active font-semibold' : ''
                     }`
                   }
                 >
@@ -89,25 +85,6 @@ export default function Sidebar() {
           </section>
         )}
 
-        <section>
-          <div className="sidebar-group-label px-3 mb-2 text-[10px] font-bold text-ink-3 uppercase tracking-[.16em]">System</div>
-          <div className="sidebar-link-list space-y-1">
-            {systemLinks.map(link => (
-              <NavLink 
-                key={link.label} 
-                to={link.to}
-                className={({ isActive }) =>
-                  `sidebar-link flex items-center gap-3 px-3 py-2.5 text-[13px] rounded-control transition-colors ${
-                    isActive ? 'bg-accent-tint text-accent-ink font-semibold' : 'text-ink-2 hover:bg-hover hover:text-ink'
-                  }`
-                }
-              >
-                <link.icon size={16} />
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-        </section>
       </nav>
     </aside>
   );

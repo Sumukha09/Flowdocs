@@ -26,8 +26,8 @@ export default function RunApprovals() {
     load();
   }, [id]);
 
-  if (loading) return <div className="p-8"><LoadingState label="Loading findings for review..." /></div>;
-  if (!details) return <div className="p-8">Failed to load run details.</div>;
+  if (loading) return <div className="p-4 sm:p-6 lg:p-8"><LoadingState label="Loading findings for review..." /></div>;
+  if (!details) return <div className="p-4 sm:p-6 lg:p-8">Failed to load run details.</div>;
 
   const pendingFindings = details.findings.filter(f => f.status === 'pending');
 
@@ -49,8 +49,8 @@ export default function RunApprovals() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center text-xs text-ink-3 font-mono mb-2">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="mb-2 flex flex-wrap items-center gap-y-1 text-xs font-mono text-ink-3">
         <Link to="/runs" className="hover:text-ink hover:underline">Runs</Link>
         <ChevronRight size={12} className="mx-1" />
         <Link to={`/runs/${id}`} className="hover:text-ink hover:underline">{id.substring(0,8)}</Link>
@@ -59,14 +59,14 @@ export default function RunApprovals() {
       </div>
       
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink flex items-center gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl text-ink flex items-center gap-2">
           <CheckSquare className="text-accent" /> Human Review Gate
         </h1>
         <p className="text-sm text-ink-3 mt-1">Review and action the agent's findings before they are committed.</p>
       </div>
 
       {pendingFindings.length === 0 ? (
-        <div className="p-12 border border-dashed border-line rounded-card flex flex-col items-center justify-center text-ink-3">
+        <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-line p-6 text-ink-3 sm:p-12">
           <CheckSquare size={32} className="mb-4 text-green opacity-50" />
           <p className="text-sm mb-4">No pending items require your decision.</p>
           <button 
@@ -83,14 +83,14 @@ export default function RunApprovals() {
               }
             }}
             disabled={submitting}
-            className="px-4 py-2 bg-accent text-white text-sm font-medium rounded shadow-sm hover:bg-accent-hover disabled:opacity-50 transition-colors"
+            className="w-full rounded bg-accent px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-50 sm:w-auto sm:py-2"
           >
             {submitting ? "Committing..." : "Commit Clean Run"}
           </button>
           <Link to={`/runs/${id}`} className="mt-4 text-ink-3 text-sm hover:underline">Return to Run Timeline</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
            <div className="space-y-4">
               <h2 className="text-sm font-semibold text-ink-3 uppercase tracking-wider">Review Queue ({pendingFindings.length})</h2>
               <ApprovalCard 

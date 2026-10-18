@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
-import { getGlobalStats, getRuns, createRun } from '../api';
-import { Activity, Clock, FileText, CheckCircle, AlertTriangle, PlayCircle, List } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getGlobalStats, getRuns } from '../api';
+import { Activity, FileText, CheckCircle, AlertTriangle, PlayCircle, List } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import FilterTable from '../components/ui/FilterTable';
 
 function StatCard({ title, value, label, icon: Icon, colorClass }) {
@@ -25,9 +25,6 @@ export default function Overview() {
   const [stats, setStats] = useState(null);
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const fileInputRef = useRef(null);
-  const [creating, setCreating] = useState(false);
-  const navigate = useNavigate();
   useEffect(() => {
     async function loadData() {
       try {
@@ -48,7 +45,7 @@ export default function Overview() {
 
   if (loading) {
     return (
-      <div className="p-8 h-full flex flex-col">
+      <div className="flex h-full flex-col p-4 sm:p-6 lg:p-8">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 bg-field rounded-full animate-pulse" />
           <div className="space-y-2">
@@ -56,7 +53,7 @@ export default function Overview() {
             <div className="w-32 h-4 bg-field rounded animate-pulse" />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <div key={i} className="h-32 rounded-card bg-field animate-pulse" />
           ))}
@@ -94,52 +91,37 @@ export default function Overview() {
   });
 
   return (
-    <div className="p-8 pb-20 max-w-7xl mx-auto space-y-8">
-      <div className="flex justify-between items-end">
+    <div className="mx-auto max-w-7xl space-y-6 p-4 pb-20 sm:space-y-8 sm:p-6 sm:pb-20 lg:p-8 lg:pb-20">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">Agentic Workflow Overview</h1>
-          <p className="text-sm text-ink-3 mt-1">Real-time metrics and system observability.</p>
+          <p className="text-xs font-semibold text-accent mb-2">DOCUMENT REVIEW WORKSPACE</p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl text-ink">Your review desk</h1>
+          <p className="text-sm text-ink-3 mt-2">Follow each document from intake through verified findings.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full gap-2 sm:w-auto">
            <Link 
              to="/runs/new"
-             className="flex items-center gap-2 px-3 py-1.5 rounded-control bg-accent text-white text-sm font-medium shadow-btn hover:bg-accent-ink transition-colors"
+             className="flex w-full items-center justify-center gap-2 rounded-control bg-accent px-3 py-2 text-sm font-medium text-white shadow-btn transition-colors hover:bg-accent-ink sm:w-auto"
            >
-              <PlayCircle size={16} /> New Run
+              <PlayCircle size={16} /> Start a review
            </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
         <StatCard title="Active Runs" value={s.active_runs} label="Currently Executing" icon={Activity} colorClass="text-accent" />
         <StatCard title="Documents Processed" value={s.total_documents} label="Total Ingested" icon={FileText} colorClass="text-ink" />
         <StatCard title="Claims Extracted" value={s.total_claims} label="Grounded Statements" icon={CheckCircle} colorClass="text-green" />
         <StatCard title="Pending Approvals" value={s.pending_approvals} label="Awaiting Human Review" icon={AlertTriangle} colorClass="text-orange" />
         <StatCard title="Total Findings" value={s.total_findings} label="Detected issues" icon={AlertTriangle} colorClass="text-red" />
-        <StatCard title="Total Runs" value={s.total_runs} label="All Time" icon={List} colorClass="text-ink-2" />
-        
-
-        <div className="rounded-card bg-surface shadow-card p-4 flex flex-col justify-between border-l-4 border-accent">
-           <div className="flex items-start justify-between">
-              <span className="text-sm font-medium text-ink-2">Rate Limits</span>
-              <div className="p-2 rounded-control bg-field text-accent">
-                <Clock size={16} />
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex justify-between items-end">
-                <span className="text-2xl font-bold text-ink">7<span className="text-sm text-ink-3 font-normal"> RPM</span></span>
-                <span className="text-xs text-ink-3">Limit: 10 RPM</span>
-              </div>
-              <div className="w-full bg-field h-1.5 rounded-full mt-2 overflow-hidden">
-                 <div className="bg-accent h-full w-[70%]" />
-              </div>
-            </div>
-        </div>
+        <StatCard title="Total Runs" value={s.total_runs} label="All time" icon={List} colorClass="text-ink-2" />
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight text-ink">Recent Runs</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">Recent reviews</h2>
+          <Link to="/runs" className="text-sm font-medium text-accent-ink hover:underline">View all runs</Link>
+        </div>
         {runs.length > 0 ? (
           <FilterTable 
             columns={{
@@ -150,7 +132,7 @@ export default function Overview() {
             rows={tableRows} 
           />
         ) : (
-          <div className="p-12 border border-dashed border-line rounded-card flex flex-col items-center justify-center text-ink-3">
+          <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-line p-6 text-ink-3 sm:p-12">
             <Activity size={32} className="mb-4 opacity-50" />
             <p className="text-sm">No runs executed yet.</p>
           </div>

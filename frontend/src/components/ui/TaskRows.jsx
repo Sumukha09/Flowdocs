@@ -70,7 +70,7 @@ export default function TaskRows({ rows, variant = "Capsules" }) {
            badge = <SpinnerRing>{i + 1}</SpinnerRing>; // pending
         }
 
-        let pill = null;
+        let pill;
         if (row.status === 'done') {
            pill = (
              <span className="inline-flex h-5.5 items-center gap-1.5 rounded-full bg-green/10 px-2 text-[11.5px] font-medium text-green" style={{ animation: "fade-in 200ms ease-out both" }}>
@@ -112,15 +112,15 @@ export default function TaskRows({ rows, variant = "Capsules" }) {
               type="button"
               aria-expanded={open}
               onClick={() => setManualOpen((current) => ({ ...current, [row.key]: !open }))}
-              className="flex h-12 w-full items-center gap-3 px-3 text-left transition-colors duration-100 hover:bg-inset"
+              className="flex min-h-12 w-full flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-left transition-colors duration-100 hover:bg-inset sm:h-12 sm:flex-nowrap sm:gap-3 sm:py-0"
             >
               <span className="flex h-6 w-6 shrink-0 items-center justify-center">
                 {badge}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">
+              <span className="min-w-0 flex-1 basis-32 truncate text-[13px] font-medium text-ink">
                 {row.label}
               </span>
-              <span className="text-[12.5px] text-ink-2 tabular-nums">{row.amount}</span>
+              <span className="max-w-full truncate text-[12.5px] text-ink-2 tabular-nums sm:max-w-48">{row.amount}</span>
               {pill}
               <span
                 aria-hidden="true"
@@ -151,15 +151,15 @@ export default function TaskRows({ rows, variant = "Capsules" }) {
                       {row.details.map((d, j) => (
                         <div
                           key={j}
-                          className="flex items-center justify-between py-0.5"
+                          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-0.5 sm:flex-nowrap"
                           style={
                             open
                               ? { animation: `fade-up 300ms cubic-bezier(0.23,1,0.32,1) ${120 + j * 100}ms both` }
                               : undefined
                           }
                         >
-                          <span className="text-[12px] text-ink-2">{d.label}</span>
-                          <span className="font-mono text-[11.5px] text-ink-3 tabular-nums">
+                          <span className="min-w-0 break-words text-[12px] text-ink-2">{d.label}</span>
+                          <span className="shrink-0 font-mono text-[11.5px] text-ink-3 tabular-nums">
                             {d.meta}
                           </span>
                         </div>

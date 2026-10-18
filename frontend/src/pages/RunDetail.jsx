@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getRunState, getRunDetails, addDocumentsToRun, resumeRun } from '../api';
 import TaskRows from '../components/ui/TaskRows';
 import LoadingState from '../components/ui/LoadingState';
-import { AlertCircle, CheckCircle2, Clock, ChevronRight, Upload, FilePlus, Download } from 'lucide-react';
+import { AlertCircle, ChevronRight, FilePlus, Download } from 'lucide-react';
 
 const STAGES = [
   'ingest',
@@ -60,14 +60,14 @@ export default function RunDetail() {
       mounted = false;
       clearInterval(interval);
     };
-  }, [id]);
+  }, [id, initialDocIds]);
 
   if (loading) {
-    return <div className="p-8"><LoadingState label="Loading workflow state..." variant="Dots" /></div>;
+    return <div className="p-4 sm:p-6 lg:p-8"><LoadingState label="Loading workflow state..." variant="Dots" /></div>;
   }
 
   if (!state) {
-    return <div className="p-8 text-red">Failed to load run state.</div>;
+    return <div className="p-4 text-red sm:p-6 lg:p-8">Failed to load run state.</div>;
   }
 
   const currentStageIndex = STAGES.indexOf(state.current_stage);
@@ -217,14 +217,14 @@ export default function RunDetail() {
   });
 
   return (
-    <div className="p-8 pb-20 max-w-5xl mx-auto space-y-8">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 pb-20 sm:space-y-8 sm:p-6 sm:pb-20 lg:p-8 lg:pb-20">
       <div>
-        <div className="flex items-center text-xs text-ink-3 font-mono mb-2">
+        <div className="mb-2 flex flex-wrap items-center gap-y-1 text-xs font-mono text-ink-3">
           <Link to="/runs" className="hover:text-ink hover:underline">Runs</Link>
           <ChevronRight size={12} className="mx-1" />
-          <span>{id}</span>
+          <span className="break-all">{id}</span>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Workflow Execution</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl text-ink">Workflow Execution</h1>
         
         {isFailed && state.errors && (
           <div className="mt-4 p-4 rounded-card bg-red/10 border border-red/20 text-red flex gap-3 items-start">
@@ -237,7 +237,7 @@ export default function RunDetail() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="lg:col-span-2 space-y-6">
           <h2 className="text-sm font-semibold text-ink-3 uppercase tracking-wider">Execution Trace</h2>
           <TaskRows rows={taskRowsData} variant="Capsules" />

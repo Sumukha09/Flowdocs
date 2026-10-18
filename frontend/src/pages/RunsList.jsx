@@ -22,7 +22,7 @@ export default function RunsList() {
     load();
   }, []);
 
-  if (loading) return <div className="p-8"><LoadingState label="Loading runs..." /></div>;
+  if (loading) return <div className="p-4 sm:p-6 lg:p-8"><LoadingState label="Loading runs..." /></div>;
 
   const tableFilters = [
     { key: "all", label: "All Runs", count: runs.length },
@@ -40,7 +40,7 @@ export default function RunsList() {
       statusKey: isRunning ? 'running' : r.status,
       cells: [
         <Link key={r.id} to={`/runs/${r.id}`} className="hover:underline text-ink font-mono">{r.id.substring(0, 8)}...</Link>,
-        <span key="date" className="tabular-nums">{new Date(r.created_at || Date.now()).toLocaleString()}</span>,
+        <span key="date" className="tabular-nums">{r.created_at ? new Date(r.created_at).toLocaleString() : '—'}</span>,
         <span key="status" className={`inline-flex h-5 items-center rounded-[5px] px-1.5 text-[11px] font-medium uppercase ${pillClass}`}>{r.status}</span>,
         <Link key="action" to={`/runs/${r.id}`} className="text-accent-ink hover:underline">View details</Link>
       ]
@@ -48,8 +48,8 @@ export default function RunsList() {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-ink">All Workflow Runs</h1>
+    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+      <h1 className="break-words text-2xl font-semibold tracking-tight text-ink sm:text-3xl">All Workflow Runs</h1>
       <FilterTable 
         columns={{
           template: '1.2fr 1fr 1fr 1fr',
